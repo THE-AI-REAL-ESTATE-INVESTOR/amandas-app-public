@@ -17,10 +17,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+
+      - name: Install packages
+        run: pnpm install
 
       - name: Run tests
         run: |
@@ -29,10 +34,10 @@ jobs:
 
           # Run different types of tests and capture results
           echo "Running Unit Tests..." | tee -a test-results/summary.txt
-          npm run test:unit || true
+          pnpm run test:unit || true
           
           echo "\nRunning Integration Tests..." | tee -a test-results/summary.txt
-          npm run test:integration || true
+          pnpm run test:integration || true
           
           # Count test results
           UNIT_PASSED=$(grep -c "PASS" test-results/summary.txt || echo "0")
@@ -67,18 +72,23 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install dependencies
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+
+      - name: Install packages
         run: |
-          npm ci
-          npx playwright install --with-deps
+          pnpm install
+          pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests
         run: |
           mkdir -p test-results
           echo "\nRunning E2E Tests..." | tee -a test-results/summary.txt
-          npm run test:e2e || true
+          pnpm run test:e2e || true
 
       - name: Upload test results
         if: always()
@@ -118,13 +128,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+
+      - name: Install packages
+        run: pnpm install
 
       - name: Build application
-        run: npm run build
+        run: pnpm run build
 
       - name: Create build summary
         run: |
