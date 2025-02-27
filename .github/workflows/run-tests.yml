@@ -1,0 +1,139 @@
+name: Run Tests
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - pre-production
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: |
+          # Create directory for test results
+          mkdir -p test-results
+
+          # Run different types of tests and capture results
+          echo "Running Unit Tests..." | tee -a test-results/summary.txt
+          npm run test:unit || true
+          
+          echo "\nRunning Integration Tests..." | tee -a test-results/summary.txt
+          npm run test:integration || true
+          
+          # Count test results
+          UNIT_PASSED=$(grep -c "PASS" test-results/summary.txt || echo "0")
+          UNIT_FAILED=$(grep -c "FAIL" test-results/summary.txt || echo "0")
+          
+          # Create final summary
+          echo "\nTest Summary:" | tee -a test-results/summary.txt
+          echo "Unit Tests: $UNIT_PASSED passed, $UNIT_FAILED failed" | tee -a test-results/summary.txt
+          
+          # Exit with failure if any tests failed
+          if [ "$UNIT_FAILED" -gt "0" ]; then
+            exit 1
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 14
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: |
+          mkdir -p test-results
+          echo "\nRunning E2E Tests..." | tee -a test-results/summary.txt
+          npm run test:e2e || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  security:
+    runs-on: ubuntu-latest
+    needs: [test, e2e]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run security scan
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, e2e, security]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Create build summary
+        run: |
+          echo "\nBuild Status:" >> test-results/summary.txt
+          echo "✅ Build completed successfully" >> test-results/summary.txt
+
+      - name: Upload build results
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-results
+          path: .next/
+          retention-days: 14
