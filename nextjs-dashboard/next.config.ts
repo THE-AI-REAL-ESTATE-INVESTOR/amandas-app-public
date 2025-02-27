@@ -1,9 +1,13 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
   output: 'standalone',
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
-  serverExternalPackages: ['@heroicons/react'],
+  typescript: { 
+    ignoreBuildErrors: true 
+  },
+  eslint: { 
+    ignoreDuringBuilds: true 
+  },
   staticPageGenerationTimeout: 120,
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
   images: {
@@ -22,6 +26,10 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+  // Add Web Vitals attribution for performance monitoring
+  experimental: {
+    webVitalsAttribution: ['CLS', 'LCP']
   }
 };
 
